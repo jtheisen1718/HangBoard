@@ -1,0 +1,108 @@
+The goal of this assignment is to make a fully playable version of HangTime, to see how to read input from the keyboard, and to gain experience and practice working with bit packing.
+
+Please create a proj2 directory in your git repository and use it for this assignment.
+
+Begin by copying over your files from proj1.
+
+For this assignment, you will build the game administration code to allow two players to interactively compete in a game of HangTime. You will also extend the board representation to support a more compact bits option.
+
+=== Code structure
+
+You will retain the structure of your prior work on HangTime: pos to represent a position on the board, board to represent the state of the board in two different possible ways, and logic to enforce and implement the rules of the game.
+
+We will modify board.c to add support for the bits representation. To provide the interactive gameplay feature, we will create play.c, a file that alternates turns between two human players (or one human pretending to be two different players, for testing purposes) to actually play the game.
+
+To be clear, we retain the prior aspects of the game: the ability to use different board and run sizes, and hang times, and to still use the matrix representation, and will keep the functions you were mandated to build in the previous phase.
+
+Like last time, you are expected to add comments for each of the functions.
+
+The header files specify the bare minimum set of functions required for this assignment. Continue to identify opportunities for helper functions and for functions that would aid in debugging and testing. Judicious and thoughtful choices here will immensely improve the readability of your code and simplify your tasks.
+
+=== Human players and interaction
+
+We will write a loop that alternates between asking the black player for their move, then the white player for their move, and then the black player again, and so on.
+
+Because we are creating a text-based program, our display of information and prompts to the players will take the form of text printed to the terminal. Similarly, then, we will receive instructions from the players via the keyboard.
+
+This provokes the question: how do we read input from the keyboard? The complement to the printf function in C, that writes to the screen, is the scanf function, that reads from the keyboard.
+
+The scanf function works very similarly to printf. The first argument is a string, consisting of format codes. The remaining arguments, one per format code in the string, specify where to store the information read from the keyboard (instead of what to write to the screen in place of patterns).
+
+Because scanf needs to take in parameters and modify them to return back new values, it uses out-parameters. If you wish to read in an integer, character, floating-point value, etc., you must specify the proper format code (the same codes are used as for printf), then pass in a pointer to a variable of the right type to store it. The contents of this variable will then be updated with the read value.
+
+A full treatment of this function is outside the scope of this assignment, although you are strongly encouraged to learn more about it when you are less busy. To avoid misleading you and for completeness, we will simply add one important fact: if you read in a string, you pass in the pointer to the string itself, rather than using an ampersand as you normally would for out-parameters. Functions that take in arrays can already modify them without using any extra out-parameter machinery. But, we will not necessarily be reading strings in this assignment.
+
+As an example, here is code to read in a single character:
+
+char ch;
+printf("Please enter a character: ");
+scanf("%c", &ch);
+If you were to run this code, you would be prompted for a character. Once you type one in and press return, it will be read into ch.
+
+
+=== Game administration
+
+We will now build the main gameplay loop for HangTime.
+
+Create a file, play.c, whose main function (and associated helpers) makes a new game, then begins running it.
+
+Your play executable should require command-line arguments: -w 5 -h 3 -r 2 -t 3, specifying (in the order shown) the width, height, winning run length, and hang time that should be passed in to new_game. (In this example, the width is 5, the height is 3, the winning run length is 2, and the hang time is 3, but the user should be able to specify any valid values on the command line, and in any order.)
+
+Your overall gameplay interface must behave as follows:
+
+Use board_show to draw the state of the board.
+Print a prompt, either "Black: " or "White: ", depending upon whose move it is.
+Read in two characters (with a call to scanf).
+Interpret these characters as a location at which to place a piece. The two characters indicate the row and column, in that order, at which to place the piece. Parse these characters following the same rules as the ones used in the first phase of the project for row and column number printing during board_show. For instance, 4 refers to row or column 4, and B indicates row or column 11. (Note that this coding scheme always guarantees rows or columns can and will be specified with a single character, and is convenient because it matches the labelling of the board on screen.) You are not expected to handle boards where all of the digits, upper-case, and lower-case letters are insufficient to index the rows or columns, because after a certain point, the labels became indistinguishable ?s.
+If the input cannot be parsed (either or both is an invalid character), so state and go back to step 2 without changing the turn. (Simple inequalities over the ranges of legal row and column characters can be used for this. Note that your code is not expected to be robust to improper entry of other than two characters at a time when exactly two are expected; this is substantially more complex to implement.)
+Turn the row and column characters into actual numbers. (Simple arithmetic using ASCII character codes can accomplish this.)
+If the move requests that a piece be placed into an already-occupied location, or a location off the board, so state and go back to step 2 without changing the turn.
+Place a piece at the desired location, for the player whose turn it is.
+Determine if the game is over. If it is, show the final board state, print the outcome, and exit the program.
+If the game is not over, go back to Step 1.
+
+Sprinkle in newlines where needed to make the interaction look visually appealing and to avoid clutter.
+
+A note on reading characters from the keyboard: there is a slight complication, as the user enters two characters but must press return in order to have that input register. If you ask it only to read the two, intended characters, the scanf function will give you the user's entry, but leave the newline character "buffered." This means that the newline character will remain pending and be available in a subsequent scanf. But, we don't want the next call to scanf to give us this newline; we want it to give us the next meaningful two characters: row and column identifiers. We can address this issue by asking scanf to both read two characters of interest, and to read a third character but to immediately discard it. We do so with the following syntax:
+
+scanf("%c%c%*c", &ch1, &ch2);
+Placing an asterisk between a percent sign and a format code instructs scanf to discard a value of that type, and a corresponding pointer is not expected in the parameter list. (We could instead store the newline in a third destination and omit the asterisk, but this feels inelegant.)
+
+
+At this point, you may be (and should be) eager to give your code a try. Note that you still haven't implemented the bits representation, but it is good to work out any bugs in this part before moving on. We will give you the Makefile next so you can run things now. After you get this code working, we will discuss the bits representation.
+
+=== Makefile
+
+Here is the Makefile for this assignment:
+
+play: pos.h pos.c board.h board.c logic.h logic.c play.c
+    clang -Wall -g -O0 -o play pos.c board.c logic.c play.c
+evidence: pos.h pos.c board.h board.c logic.h logic.c evidence.c
+    clang -Wall -g -O0 -o evidence pos.c board.c logic.c evidence.c
+clean:
+    rm -rf evidence play *.o *~ *dSYM
+
+
+You can modify your existing Makefile to add the new lines and change the last line. Don't forget the usual admonition about tabs.
+
+You can now type make evidence to build the evidence executable, and make play to build the play executable, either of which can then be run.
+
+=== Bits representation
+
+The other task to complete in this phase of the project is to add support for the other method of storing the board, while keeping the existing (matrix) option fully intact.
+
+The bits representation is dramatically more compact than the matrix representation you completed in the first phase. In this new representation, two bits are used per cell. The bits 00 denote an empty cell; 01, a black piece in a cell; and 10 a white one. The bits 11 will never be used.
+
+The board is scanned from top to bottom, with individual rows scanned from left to right: in other words, in the same manner in which English text is read and written. In this order, the bits are placed in a one-dimensional array.
+
+The first 32 bits are placed in the first element of this array. The first two bits, representing the top-left corner of the board, are the two least-significant bits (the two with the smallest place values) in this first array entry. Subsequent cells use higher-valued bits. Once the first array entry is used up, we move on to the next, again beginning with that entry's least-significant bits. We allocate precisely as few array elements as are needed for the desired board size. Depending upon the size of the board, the last array element may only be partially used; if so, the higher-value bits of that element will be unused.
+
+Using the bitwise operators we saw in class, update your implementations of the board functions to support this representation. For instance, board_new should allocate either style of board upon request, and board_get and board_set should retrieve or update the desired cell in whichever representation is in use by a given board. All the functions mandated in the first phase of the project should work on either type of board. They should behave identically, in the sense that, at a high level, whether the matrix or bits representation is in use, the same information is being stored or inspected. Of course, how that information is being stored will be very different in the two cases.
+
+Put another way, if you start with a call to new_game, perform a series of calls to board_set, and place_piece, then you should receive identical results from calls to board_get, game_outcome, and board_show, whether the matrix or bits representation was used.
+
+If, as we strongly recommended, you consistently used board_get and board_set in your logic.c code rather than directly accessing the matrix representation, then it will likely be the case that no changes will be needed to logic.c. However, if you accessed the matrix directly from this file, you will need to update logic.c to use board_get and board_set exclusively. This will then make the code in your logic.c agnostic as to the specific board representation in use. (The alternative would be to have switch statements, or similar, all throughout your logic.c as well, which would substantially increase its complexity and the difficulty of reading and maintaining it.)
+
+Your main function will make a new board at the beginning of gameplay. Require that the user specify either the command line option -m or -b (exactly one of them), to use the matrix, or bits, representation, respectively. It should be possible to place this option before, among, or after the other options (though never between a letter and its corresponding number).
+
+Although you can test your bits representation with interactive gameplay, a more thorough approach would be to use your evidence tests from the prior phase. Update your old evidence.c and switch the boards in your examples to use the bits representation and confirm that everything still works the same. Remember that you can type make evidence to build the evidence executable, and make play to build the play executable, either of which can then be run.
